@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="GrowView AI turns grow-floor photos into inspection-ready OMMA and OSHA punch lists. Oklahoma-based pilot audits.">
+<meta name="theme-color" content="#0A0B0A">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="GrowView AI">
+<meta property="og:description" content="Photo-to-punch-list OMMA compliance and OSHA safety auditing for Oklahoma facilities.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%230A0B0A'/%3E%3Cpath d='M2 8V3h5M17 3h5v5M22 16v5h-5M7 21H2v-5' stroke='%23F3F4F1' stroke-width='1.6' fill='none'/%3E%3Crect x='9' y='9' width='6' height='6' fill='%23D2FF28'/%3E%3C/svg%3E">
+<title>GrowView AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      colors: { carbon:'#0A0B0A', slate:'#111311', paper:'#F3F4F1', ash:'#8C928D', volt:'#D2FF28', ok:'#22C55E', warn:'#F59E0B', bad:'#EF4444' },
+      fontFamily: { display:['Space Grotesk','system-ui','sans-serif'], sans:['Inter','system-ui','sans-serif'], mono:['JetBrains Mono','ui-monospace','monospace'] },
+      borderRadius: { DEFAULT:'2px' }
+    } }
+  };
+</script>
+<style>
+  /* Layout concept: a 1280px architectural frame bounded by 1px guide lines; horizontal rules carry crosshair markers where they meet the guides. */
+  :root{
+    --carbon:#0A0B0A; --slate:#111311; --paper:#F3F4F1; --ash:#8C928D; --volt:#D2FF28;
+    --ok:#22C55E; --warn:#F59E0B; --bad:#EF4444;
+    --line:rgba(243,244,241,.14); --line-strong:rgba(243,244,241,.30);
+    --display:'Space Grotesk',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+    color-scheme: dark;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--carbon);color:var(--paper);font-family:var(--body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--carbon);z-index:60}
+  #root{min-height:100vh}
+  .page{overflow-x:clip}
+  .frame{max-width:1280px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line);position:relative}
+  .gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  @media(min-width:1024px){.gut{padding-left:max(48px,env(safe-area-inset-left,0px));padding-right:max(48px,env(safe-area-inset-right,0px))}}
+  section{scroll-margin-top:72px}
+  .mono{font-family:var(--mono);letter-spacing:.06em}
+  .rule{position:relative;height:0;border-top:1px solid var(--line)}
+  .rule .x{position:absolute;top:0;transform:translate(-50%,-52%);font:400 13px/1 var(--mono);color:var(--ash);background:var(--carbon);padding:1px 0}
+  .navbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:rgba(10,11,10,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+  .navlink{font:500 11px/1 var(--mono);letter-spacing:.08em;color:var(--ash);transition:color .15s}
+  .navlink:hover{color:var(--paper)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;font:700 12px/1 var(--mono);letter-spacing:.08em;padding:14px 18px;border-radius:2px;border:1px solid transparent;cursor:pointer;transition:transform .12s,background .15s,border-color .15s,color .15s;white-space:nowrap}
+  .btn-volt{background:var(--volt);color:#0A0B0A;border-color:var(--volt)}
+  .btn-volt:hover{background:#e3ff6b;border-color:#e3ff6b}
+  .btn-ghost{background:transparent;color:var(--paper);border-color:var(--line-strong)}
+  .btn-ghost:hover{border-color:var(--paper)}
+  .btn:active{transform:translateY(1px)}
+  :focus-visible{outline:2px solid var(--volt);outline-offset:2px}
+  .gridbg{background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:32px 32px;background-position:-1px -1px}
+  .gridbg-fade{background:radial-gradient(ellipse at center,rgba(10,11,10,0) 0,var(--carbon) 78%)}
+  .cell{border-top:1px solid var(--line)}
+  /* phone */
+  .phone{width:100%;max-width:304px;margin:0 auto;background:#050605;border:1px solid var(--line-strong);border-radius:40px;padding:8px;position:relative}
+  .screen{background:var(--slate);border-radius:32px;overflow:hidden;height:600px;display:flex;flex-direction:column;position:relative}
+  .island{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:84px;height:22px;background:#000;border-radius:12px;z-index:5}
+  .tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:0 12px}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:none;font:700 9.5px/1 var(--mono);letter-spacing:.06em;padding:8px 9px;border-radius:2px;border:1px solid var(--line-strong);color:var(--ash);background:transparent;cursor:pointer}
+  .tab[aria-selected="true"]{background:var(--volt);color:#0A0B0A;border-color:var(--volt)}
+  .vp{position:relative;aspect-ratio:4/3;background:#0c0e0c;overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .vp svg{position:absolute;inset:0;width:100%;height:100%}
+  .scanline{position:absolute;left:0;right:0;height:2px;background:var(--volt);box-shadow:0 0 14px 2px rgba(210,255,40,.45);animation:scan 1.7s linear infinite;z-index:3}
+  @keyframes scan{from{top:0}to{top:100%}}
+  .reticle{position:absolute;border:1px solid color-mix(in srgb,var(--c) 60%,transparent);background:color-mix(in srgb,var(--c) 7%,transparent);cursor:pointer;padding:0;animation:pop .28s ease-out both;z-index:2}
+  .reticle[data-active="true"]{background:color-mix(in srgb,var(--c) 18%,transparent);border-color:var(--c);z-index:4}
+  .reticle i{position:absolute;width:7px;height:7px;border:2px solid var(--c)}
+  .reticle i.tl{left:-2px;top:-2px;border-right:0;border-bottom:0}
+  .reticle i.tr{right:-2px;top:-2px;border-left:0;border-bottom:0}
+  .reticle i.bl{left:-2px;bottom:-2px;border-right:0;border-top:0}
+  .reticle i.br{right:-2px;bottom:-2px;border-left:0;border-top:0}
+  .reticle b{position:absolute;left:-1px;bottom:100%;font:700 8px/1 var(--mono);letter-spacing:.04em;background:var(--c);color:#0A0B0A;padding:2px 4px;white-space:nowrap}
+  @keyframes pop{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}
+  .frow{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:start;text-align:left;width:100%;padding:8px 12px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--paper);cursor:pointer}
+  .frow[data-active="true"]{background:rgba(243,244,241,.06)}
+  .sq{display:inline-block;width:8px;height:8px;flex:none}
+  .field{width:100%;background:var(--carbon);border:1px solid var(--line-strong);border-radius:2px;color:var(--paper);padding:12px 12px;font:400 15px/1.3 var(--body);transition:border-color .15s}
+  .field:focus{outline:none;border-color:var(--volt)}
+  .field::placeholder{color:#5d625e}
+  select.field{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ash) 50%),linear-gradient(135deg,var(--ash) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+  .lbl{display:block;font:500 10.5px/1 var(--mono);letter-spacing:.08em;color:var(--ash);margin-bottom:8px}
+  .wordmark{font:700 clamp(40px,12.4vw,168px)/.82 var(--display);letter-spacing:-.045em;color:var(--slate);-webkit-text-stroke:1px var(--line-strong);white-space:nowrap;text-align:center;user-select:none}
+  .sheet{background:var(--paper);color:#0A0B0A}
+  .sheet th{font:500 10px/1 var(--mono);letter-spacing:.06em;text-align:left;padding:8px 10px;border-bottom:1px solid #0A0B0A;color:#444}
+  .sheet td{padding:9px 10px;border-bottom:1px solid #cfd2cc;font-size:13px;vertical-align:top}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.scanline{animation:none;display:none}.reticle{animation:none}*{transition:none!important}}
+</style>
+
+<style>html{-webkit-text-size-adjust:100%}body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script>
+(function(){
+const { useState, useEffect, useRef } = React;
+const html = htm.bind(React.createElement);
+
+/* ---------- icons: Lucide React, with matching inline fallbacks ---------- */
+const FB = {
+  Camera:[ 'M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z', ['circle',{cx:12,cy:13,r:3}] ],
+  ScanLine:[ 'M3 7V5a2 2 0 0 1 2-2h2','M17 3h2a2 2 0 0 1 2 2v2','M21 17v2a2 2 0 0 1-2 2h-2','M7 21H5a2 2 0 0 1-2-2v-2','M7 12h10' ],
+  FileText:[ 'M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z','M14 2v6h6','M16 13H8','M16 17H8','M10 9H8' ],
+  ShieldCheck:[ 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z','m9 12 2 2 4-4' ],
+  ArrowRight:[ 'M5 12h14','m12 5 7 7-7 7' ],
+  Check:[ 'M20 6 9 17l-5-5' ],
+  X:[ 'M18 6 6 18','m6 6 12 12' ],
+  Copy:[ ['rect',{x:8,y:8,width:14,height:14,rx:2}], 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' ],
+  Mail:[ ['rect',{x:2,y:4,width:20,height:16,rx:2}], 'm22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7' ],
+  MapPin:[ 'M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z', ['circle',{cx:12,cy:10,r:3}] ],
+  Lock:[ ['rect',{x:3,y:11,width:18,height:11,rx:2}], 'M7 11V7a5 5 0 0 1 10 0v4' ],
+  Tag:[ 'M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z','M7 7h.01' ],
+  Trash2:[ 'M3 6h18','M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6','M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2','M10 11v6','M14 11v6' ],
+  Video:[ 'm22 8-6 4 6 4V8Z', ['rect',{x:2,y:6,width:14,height:12,rx:2}] ],
+  Layers:[ 'm12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z','m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65','m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65' ]
+};
+function fallbackIcon(parts){
+  return function(p){
+    const size = p.size || 16, sw = p.strokeWidth || 1.75;
+    return React.createElement('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:sw,strokeLinecap:'round',strokeLinejoin:'round',className:p.className,'aria-hidden':true},
+      parts.map((d,i)=> Array.isArray(d) ? React.createElement(d[0],Object.assign({key:i},d[1])) : React.createElement('path',{key:i,d:d})));
+  };
+}
+const Ic = (n) => (window.lucideReact && window.lucideReact[n]) || fallbackIcon(FB[n]);
+const Camera=Ic('Camera'), ScanLine=Ic('ScanLine'), FileText=Ic('FileText'), ShieldCheck=Ic('ShieldCheck'), ArrowRight=Ic('ArrowRight'),
+      Check=Ic('Check'), X=Ic('X'), Copy=Ic('Copy'), Mail=Ic('Mail'), MapPin=Ic('MapPin'), Lock=Ic('Lock'), Tag=Ic('Tag'),
+      Trash2=Ic('Trash2'), Video=Ic('Video'), Layers=Ic('Layers');
+
+/* ---------- demo data (coordinates on a 200 x 150 scene) ---------- */
+const COL = { ok:'#22C55E', warn:'#F59E0B', bad:'#EF4444' };
+const STAT = { ok:'PASS', warn:'REVIEW', bad:'FAIL' };
+const PRI = { bad:'P1', warn:'P2' };
+const ROOMS = [
+  { id:'A', tab:'ROOM A: VEG', name:'Room A, Veg', shot:'A-VEG', boxes:[
+    { id:'A-01', k:'row',  s:'ok',   x:14, y:70, w:62, h:34, label:'Clone tray, tags legible', cat:'TAG & TRACEABILITY', note:'Tag IDs are readable and match the tray in frame.' },
+    { id:'A-02', k:'tag',  s:'warn', x:92, y:52, w:26, h:28, label:'Tag faded, re-print', cat:'TAG & TRACEABILITY', note:'Ink has faded past reliable scanning.', fix:'Re-print the faded plant tag and re-attach it.' },
+    { id:'A-03', k:'puddle',s:'bad', x:120,y:104,w:58, h:30, label:'Standing water in walkway', cat:'OSHA / WALKING SURFACES', note:'Wet floor in the main aisle is a slip hazard.', fix:'Clear the water, fix the drip source and add an anti-slip mat.' },
+    { id:'A-04', k:'row',  s:'ok',   x:130,y:54, w:56, h:34, label:'Mother plant row, labeled', cat:'TAG & TRACEABILITY', note:'Row label and plant tags are in place.' }
+  ]},
+  { id:'B', tab:'ROOM B: FLOWER', name:'Room B, Flower', shot:'B-FLOWER', boxes:[
+    { id:'B-01', k:'row',  s:'bad',  x:14, y:66, w:66, h:38, label:'Untagged plant group, row 3', cat:'TAG & TRACEABILITY', note:'No tags visible on the plants in this row.', fix:'Tag every plant in row 3 and reconcile against the inventory sheet.' },
+    { id:'B-02', k:'tag',  s:'ok',   x:94, y:56, w:24, h:26, label:'Tag legible, row 4', cat:'TAG & TRACEABILITY', note:'Tag is readable and attached.' },
+    { id:'B-03', k:'bin',  s:'warn', x:128,y:58, w:34, h:38, label:'Waste bin unmarked', cat:'WASTE HANDLING', note:'Container has no label and the lid is open.', fix:'Label the bin and keep the lid closed between uses.' },
+    { id:'B-04', k:'cord', s:'warn', x:40, y:112,w:112,h:26, label:'Cord across walkway', cat:'OSHA / TRIP HAZARD', note:'Loose cord crosses the main path.', fix:'Route the cord overhead or cover it with a cable ramp.' }
+  ]},
+  { id:'C', tab:'ROOM C: DRY', name:'Room C, Dry', shot:'C-DRY', boxes:[
+    { id:'C-01', k:'rack', s:'ok',   x:12, y:46, w:56, h:58, label:'Hang rack, tagged', cat:'TAG & TRACEABILITY', note:'Every rack level carries a legible tag.' },
+    { id:'C-02', k:'fan',  s:'bad',  x:84, y:56, w:36, h:36, label:'Fan guard missing', cat:'OSHA / MACHINE GUARDING', note:'Exposed fan blades at reachable height.', fix:'Install a guard on the exhaust fan before it runs again.' },
+    { id:'C-03', k:'tag',  s:'warn', x:132,y:30, w:40, h:24, label:'Camera sightline blocked', cat:'SURVEILLANCE COVERAGE', note:'Rack edge blocks part of the camera view.', fix:'Move the rack or the camera so the sightline is clear.' },
+    { id:'C-04', k:'tag',  s:'ok',   x:134,y:86, w:34, h:30, label:'Environment log posted', cat:'DOCUMENTATION', note:'Daily log is posted and current.' }
+  ]},
+  { id:'F', tab:'FACILITY', name:'Facility common areas', shot:'FACILITY', boxes:[
+    { id:'F-01', k:'sign', s:'ok',   x:14, y:26, w:44, h:22, label:'Exit sign lit', cat:'OSHA / EGRESS', note:'Exit sign is lit and unobstructed.' },
+    { id:'F-02', k:'ext',  s:'bad',  x:32, y:62, w:26, h:50, label:'Extinguisher tag expired', cat:'OSHA / FIRE SAFETY', note:'Inspection tag date is out of range.', fix:'Schedule the extinguisher inspection and replace the tag.' },
+    { id:'F-03', k:'chem', s:'warn', x:84, y:74, w:46, h:40, label:'Chemical storage unlabeled', cat:'OSHA / HAZARD COMMUNICATION', note:'Containers have no labels in view.', fix:'Label each container and add the matching safety data sheet.' },
+    { id:'F-04', k:'tag',  s:'ok',   x:138,y:40, w:42, h:26, label:'Eyewash station clear', cat:'OSHA / FIRST AID', note:'Station is clear and accessible.' }
+  ]}
+];
+const firstBad = r => { const b = r.boxes.find(b=>b.s==='bad') || r.boxes.find(b=>b.s==='warn') || r.boxes[0]; return b.id; };
+const today = () => new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'2-digit'}).toUpperCase();
+
+function copyText(text, done){
+  const fallback = () => {
+    try{ const t=document.createElement('textarea'); t.value=text; t.style.position='fixed'; t.style.opacity='0'; document.body.appendChild(t); t.select(); const ok=document.execCommand('copy'); document.body.removeChild(t); done(!!ok);}catch(e){done(false);}
+  };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>done(true),fallback); } else fallback();
+  }catch(e){ fallback(); }
+}
+
+/* ---------- scene drawing ---------- */
+const STK='rgba(243,244,241,.5)', FIL='rgba(243,244,241,.05)';
+function Glyph({k,x,y,w,h}){
+  const P={stroke:STK,fill:FIL,strokeWidth:.8};
+  const N={stroke:STK,fill:'none',strokeWidth:.8};
+  switch(k){
+    case 'row': return html`<g>${[0,1,2].map(i=>html`<rect key=${i} x=${x} y=${y+i*(h/3)+1.5} width=${w} height=${h/3-3} ...${P}/>`)}${[.2,.5,.8].map(f=>html`<circle key=${f} cx=${x+w*f} cy=${y+h/2} r="1.6" fill=${STK}/>`)}</g>`;
+    case 'tag': return html`<g><rect x=${x+w*.15} y=${y+h*.1} width=${w*.7} height=${h*.8} ...${P}/><path d=${`M${x+w*.28} ${y+h*.4}H${x+w*.72}M${x+w*.28} ${y+h*.62}H${x+w*.6}`} ...${N}/></g>`;
+    case 'bin': return html`<g><path d=${`M${x+w*.15} ${y+h*.2}H${x+w*.85}L${x+w*.75} ${y+h*.95}H${x+w*.25}Z`} ...${P}/><path d=${`M${x+w*.08} ${y+h*.2}H${x+w*.92}`} ...${N}/></g>`;
+    case 'cord': return html`<path d=${`M${x} ${y+h*.5}C${x+w*.25} ${y-h*.2} ${x+w*.4} ${y+h*1.2} ${x+w*.6} ${y+h*.5}S${x+w*.9} ${y} ${x+w} ${y+h*.4}`} fill="none" stroke=${STK} strokeWidth="1.6"/>`;
+    case 'puddle': return html`<g><ellipse cx=${x+w/2} cy=${y+h/2} rx=${w/2} ry=${h*.36} ...${P}/><ellipse cx=${x+w/2} cy=${y+h/2} rx=${w*.3} ry=${h*.2} ...${N}/></g>`;
+    case 'fan': { const r=Math.min(w,h)/2.2, cx=x+w/2, cy=y+h/2; return html`<g><circle cx=${cx} cy=${cy} r=${r} ...${P}/><path d=${`M${cx} ${cy-r}V${cy+r}M${cx-r} ${cy}H${cx+r}`} ...${N}/><circle cx=${cx} cy=${cy} r="2.2" fill=${STK}/></g>`; }
+    case 'rack': return html`<g><rect x=${x} y=${y} width=${w} height=${h} ...${P}/>${[1,2,3,4].map(i=>html`<path key=${i} d=${`M${x} ${y+i*h/5}H${x+w}`} ...${N}/>`)}</g>`;
+    case 'ext': return html`<g><rect x=${x+w*.28} y=${y+h*.22} width=${w*.44} height=${h*.78} ...${P}/><rect x=${x+w*.38} y=${y+h*.08} width=${w*.24} height=${h*.14} ...${P}/><path d=${`M${x+w*.62} ${y+h*.12}q${w*.3} ${h*.1} ${w*.2} ${h*.4}`} ...${N}/></g>`;
+    case 'sign': return html`<g><rect x=${x} y=${y} width=${w} height=${h} ...${P}/><path d=${`M${x+w*.22} ${y+h*.5}H${x+w*.78}M${x+w*.66} ${y+h*.25}L${x+w*.78} ${y+h*.5}L${x+w*.66} ${y+h*.75}`} ...${N}/></g>`;
+    case 'chem': return html`<g><rect x=${x+w*.05} y=${y+h*.3} width=${w*.38} height=${h*.7} ...${P}/><rect x=${x+w*.55} y=${y+h*.15} width=${w*.4} height=${h*.85} ...${P}/></g>`;
+    default: return null;
+  }
+}
+function Scene({room}){
+  const spokes=[]; for(let x=-50;x<=250;x+=25) spokes.push(x);
+  return html`<svg viewBox="0 0 200 150" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g stroke="rgba(243,244,241,.07)" strokeWidth=".6" fill="none">
+      <path d="M0 62H200"/>
+      ${spokes.map(x=>html`<path key=${x} d=${`M${x} 150L100 62`}/>`)}
+      ${[72,86,104,128].map(y=>html`<path key=${y} d=${`M0 ${y}H200`}/>`)}
+    </g>
+    ${room.boxes.map(b=>html`<${Glyph} key=${b.id} k=${b.k} x=${b.x} y=${b.y} w=${b.w} h=${b.h}/>`)}
+  </svg>`;
+}
+
+/* ---------- punch list modal ---------- */
+function PunchModal({room,onClose}){
+  const [pct,setPct]=useState(0);
+  const [copied,setCopied]=useState(false);
+  const items=room.boxes.filter(b=>b.s!=='ok').sort((a,b)=>(a.s==='bad'?0:1)-(b.s==='bad'?0:1));
+  const steps=['COMPILING FINDINGS','ATTACHING PHOTO REFERENCES','RENDERING PDF'];
+  useEffect(()=>{
+    const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduce){setPct(100);return;}
+    const t=setInterval(()=>setPct(p=>{ if(p>=100){clearInterval(t);return 100;} return Math.min(100,p+4+Math.random()*5); }),90);
+    return ()=>clearInterval(t);
+  },[]);
+  useEffect(()=>{
+    const k=e=>{ if(e.key==='Escape') onClose(); };
+    window.addEventListener('keydown',k); return ()=>window.removeEventListener('keydown',k);
+  },[]);
+  const ready=pct>=100;
+  const summary=[`GROWVIEW AI PUNCH LIST: ${room.name.toUpperCase()}`,`Demo facility, Norman, OK. ${today()}`,'',...items.map(f=>`[${PRI[f.s]}] ${f.id} ${f.label}. ${f.fix}`)].join('\n');
+  const doCopy=()=>copyText(summary,ok=>{setCopied(ok);setTimeout(()=>setCopied(false),1800);});
+  return html`<div role="dialog" aria-modal="true" aria-label="Punch list export" style=${{position:'fixed',inset:0,zIndex:80,background:'rgba(5,6,5,.82)',display:'flex',alignItems:'center',justifyContent:'center',padding:'max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))'}} onClick=${e=>{ if(e.target===e.currentTarget) onClose(); }}>
+    <div style=${{width:'100%',maxWidth:'760px',maxHeight:'100%',overflow:'auto',background:'var(--slate)',border:'1px solid var(--line-strong)',borderRadius:'2px'}}>
+      <div class="flex items-center justify-between px-4 py-3" style=${{borderBottom:'1px solid var(--line)'}}>
+        <span class="mono text-[11px] text-ash">EXPORT // PUNCH-LIST.PDF</span>
+        <button class="text-ash hover:text-paper p-1" onClick=${onClose} aria-label="Close export"><${X} size=${18}/></button>
+      </div>
+      ${!ready ? html`<div class="p-6 sm:p-10">
+        <div class="mono text-[11px] text-volt mb-4">${steps[Math.min(2,Math.floor(pct/34))]}</div>
+        <div style=${{height:'6px',background:'var(--line)',borderRadius:'2px',overflow:'hidden'}}><div style=${{height:'100%',width:pct+'%',background:'var(--volt)',transition:'width .09s linear'}}></div></div>
+        <div class="mono text-[11px] text-ash mt-3">${Math.floor(pct)}%</div>
+      </div>` : html`<div class="p-4 sm:p-6">
+        <div class="sheet" style=${{borderRadius:'2px'}}>
+          <div class="flex flex-wrap items-start justify-between gap-3 p-4" style=${{borderBottom:'2px solid #0A0B0A'}}>
+            <div>
+              <div style=${{font:'700 22px/1 var(--display)',letterSpacing:'-.02em'}}>PUNCH LIST</div>
+              <div class="mono" style=${{fontSize:'10.5px',color:'#444',marginTop:'8px'}}>${room.name.toUpperCase()} // DEMO FACILITY, NORMAN, OK</div>
+            </div>
+            <div class="mono text-right" style=${{fontSize:'10.5px',color:'#444'}}>GROWVIEW AI<br/>${today()}<br/>SAMPLE DATA</div>
+          </div>
+          <div style=${{overflowX:'auto'}}>
+            <table style=${{width:'100%',minWidth:'560px',borderCollapse:'collapse'}}>
+              <thead><tr><th>PRI</th><th>ID</th><th>FINDING</th><th>CATEGORY</th><th>ACTION</th></tr></thead>
+              <tbody>${items.map(f=>html`<tr key=${f.id}>
+                <td><span class="mono" style=${{display:'inline-block',padding:'3px 6px',borderRadius:'2px',fontSize:'10.5px',fontWeight:700,background:f.s==='bad'?'#EF4444':'#F59E0B',color:'#0A0B0A'}}>${PRI[f.s]}</span></td>
+                <td class="mono" style=${{fontSize:'11px'}}>${f.id}</td>
+                <td style=${{fontWeight:600}}>${f.label}</td>
+                <td class="mono" style=${{fontSize:'10px',color:'#444'}}>${f.cat}</td>
+                <td>${f.fix}</td></tr>`)}</tbody>
+            </table>
+          </div>
+          <div class="mono p-3" style=${{fontSize:'10px',color:'#555'}}>${items.length} OPEN ITEMS // P1 FIX BEFORE NEXT WALKTHROUGH // P2 SCHEDULE THIS WEEK</div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 mt-4">
+          <button class="btn btn-volt" onClick=${doCopy}><${copied?Check:Copy} size=${15}/>${copied?'COPIED':'COPY SUMMARY'}</button>
+          <button class="btn btn-ghost" onClick=${onClose}>CLOSE</button>
+        </div>
+        <p class="mono text-[10.5px] text-ash mt-4 leading-relaxed">Preview of the exported file. Downloads are turned off in this embedded demo, so copy the summary instead.</p>
+      </div>`}
+    </div>
+  </div>`;
+}
+
+/* ---------- field scanner simulator ---------- */
+function Scanner(){
+  const [ri,setRi]=useState(1);
+  const room=ROOMS[ri];
+  const [shown,setShown]=useState(0);
+  const [scanning,setScanning]=useState(true);
+  const [active,setActive]=useState(null);
+  const [open,setOpen]=useState(false);
+  useEffect(()=>{
+    const n=room.boxes.length;
+    const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let t1,t2;
+    if(reduce){ setShown(n); setScanning(false); setActive(firstBad(room)); return; }
+    setShown(0); setScanning(true); setActive(null);
+    let k=0;
+    t1=setInterval(()=>{ k++; setShown(k); if(k>=n){ clearInterval(t1); t2=setTimeout(()=>{ setScanning(false); setActive(firstBad(room)); },380); } },420);
+    return ()=>{ clearInterval(t1); clearTimeout(t2); };
+  },[ri]);
+  const vis=room.boxes.slice(0,shown);
+  const cnt=s=>vis.filter(b=>b.s===s).length;
+  const act=room.boxes.find(b=>b.id===active);
+  return html`<div class="phone" id="scanner">
+    <div class="screen">
+      <div class="island"></div>
+      <div class="flex items-center justify-between px-6 pt-3 pb-2 mono text-[10px] text-paper" style=${{height:'36px'}}><span>9:41</span><span class="text-ash">5G ▮▮▮</span></div>
+      <div class="flex items-center justify-between px-3 pb-2">
+        <span class="mono text-[10px] font-bold tracking-wider flex items-center gap-2"><span class="sq" style=${{background:'var(--volt)'}}></span>GROWVIEW // FIELD</span>
+        <span class="mono text-[9.5px] text-ash">SCAN-0417</span>
+      </div>
+      <div class="tabs pb-3" role="tablist" aria-label="Rooms">
+        ${ROOMS.map((r,i)=>html`<button key=${r.id} role="tab" class="tab" aria-selected=${i===ri} onClick=${()=>setRi(i)}>${r.tab}</button>`)}
+      </div>
+      <div class="vp">
+        <${Scene} room=${room}/>
+        ${scanning && html`<div class="scanline"></div>`}
+        ${vis.map(b=>html`<button key=${room.id+b.id} class="reticle" data-active=${active===b.id} aria-label=${`${b.id} ${b.label}, ${STAT[b.s]}`} onClick=${()=>setActive(b.id)}
+          style=${{'--c':COL[b.s],left:(b.x/200*100)+'%',top:(b.y/150*100)+'%',width:(b.w/200*100)+'%',height:(b.h/150*100)+'%'}}>
+          <i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i><b>${b.id}</b></button>`)}
+        <div class="mono" style=${{position:'absolute',left:'8px',top:'7px',fontSize:'8px',color:'rgba(243,244,241,.7)',zIndex:5}}>CAM 01 · ${room.shot}</div>
+        <div class="mono" style=${{position:'absolute',right:'8px',top:'7px',fontSize:'8px',color:'rgba(243,244,241,.7)',zIndex:5}}>${scanning?'SCANNING':'LOCKED'} · 1/125</div>
+        <div class="mono" style=${{position:'absolute',left:0,right:0,bottom:0,padding:'5px 8px',fontSize:'8.5px',background:'rgba(10,11,10,.82)',color:'var(--paper)',zIndex:5,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+          ${act ? `${act.id} · ${act.label.toUpperCase()}` : (scanning ? 'READING FRAME…' : 'TAP A FLAG TO INSPECT')}</div>
+      </div>
+      <div class="grid grid-cols-3" style=${{borderBottom:'1px solid var(--line)'}}>
+        ${['bad','warn','ok'].map(s=>html`<div key=${s} class="flex items-center justify-center gap-2 py-2" style=${{borderRight:s!=='ok'?'1px solid var(--line)':'0'}}>
+          <span class="sq" style=${{background:COL[s]}}></span><span class="mono text-[10px] text-ash">${STAT[s]}</span><span class="mono text-[13px] font-bold">${cnt(s)}</span></div>`)}
+      </div>
+      <div class="flex-1 overflow-y-auto" style=${{minHeight:0}}>
+        ${vis.map(b=>html`<button key=${b.id} class="frow" data-active=${active===b.id} onClick=${()=>setActive(b.id)}>
+          <span class="mono text-[10px] text-ash pt-[2px]">${b.id}</span>
+          <span style=${{minWidth:0}}>
+            <span class="block text-[12.5px] font-medium leading-snug">${b.label}</span>
+            ${active===b.id && html`<span class="block mono text-[9px] text-ash mt-1 leading-relaxed">${b.cat}<span class="block normal-case mt-1" style=${{fontFamily:'var(--body)',letterSpacing:0,fontSize:'11px',color:'rgba(243,244,241,.78)'}}>${b.note}</span></span>`}
+          </span>
+          <span class="mono text-[9px] font-bold px-[6px] py-[3px] rounded-[2px]" style=${{background:COL[b.s],color:'#0A0B0A'}}>${STAT[b.s]}</span>
+        </button>`)}
+        ${vis.length===0 && html`<div class="mono text-[10px] text-ash p-4">ANALYZING FRAME…</div>`}
+      </div>
+      <div class="p-3" style=${{borderTop:'1px solid var(--line)'}}>
+        <button class="btn btn-volt w-full" disabled=${scanning} style=${{opacity:scanning?.45:1,cursor:scanning?'default':'pointer'}} onClick=${()=>setOpen(true)}><${FileText} size=${15}/>EXPORT PUNCH LIST (PDF)</button>
+      </div>
+    </div>
+    ${open && html`<${PunchModal} room=${room} onClose=${()=>setOpen(false)}/>`}
+  </div>`;
+}
+
+/* ---------- shared bits ---------- */
+function Rule(){ return html`<div class="rule" aria-hidden="true"><span class="x" style=${{left:0}}>+</span><span class="x" style=${{left:'100%'}}>+</span></div>`; }
+function Mark({size=24}){
+  return html`<svg width=${size} height=${size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M2 8V3h5M17 3h5v5M22 16v5h-5M7 21H2v-5" stroke="var(--paper)" strokeWidth="1.6"/>
+    <rect x="9" y="9" width="6" height="6" fill="var(--volt)"/>
+    <path d="M12 6v2M12 16v2M6 12h2M16 12h2" stroke="var(--ash)" strokeWidth="1"/></svg>`;
+}
+function Eyebrow({children}){ return html`<div class="mono text-[11px] text-ash flex items-center gap-2"><span class="sq" style=${{background:'var(--volt)'}}></span>${children}</div>`; }
+
+/* ---------- sections ---------- */
+function Nav(){
+  return html`<header class="navbar"><div class="frame gut flex items-center justify-between" style=${{height:'56px'}}>
+    <a href="#top" class="flex items-center gap-3" aria-label="GrowView AI home"><${Mark}/><span class="font-display font-bold tracking-tight text-[17px]">GROWVIEW<span class="text-ash"> AI</span></span></a>
+    <nav class="hidden lg:flex items-center gap-7" aria-label="Sections">
+      <a class="navlink" href="#why">[01] WHY IT MATTERS</a><a class="navlink" href="#workflow">[02] WORKFLOW</a><a class="navlink" href="#modules">[03] AUDIT MODULES</a>
+    </nav>
+    <a href="#booking" class="btn btn-volt" style=${{padding:'11px 14px',fontSize:'11px'}}>BOOK FREE AUDIT</a>
+  </div></header>`;
+}
+
+function Hero(){
+  const trust=[[Lock,'PHOTOS STAY PRIVATE','Used for your audit only'],[ShieldCheck,'NOT REPORTED','Findings are never sent to regulators'],[FileText,'YOU OWN THE REPORT','Export and keep every punch list']];
+  return html`<section id="top"><div class="frame">
+    <div class="grid lg:grid-cols-[55fr_45fr]">
+      <div class="gut py-12 lg:py-20 flex flex-col justify-between gap-12" style=${{minWidth:0}}>
+        <div>
+          <${Eyebrow}>OKLAHOMA · OMMA COMPLIANCE + OSHA SAFETY<//>
+          <h1 class="font-display font-bold mt-6 text-[40px] sm:text-[56px] lg:text-[64px]" style=${{lineHeight:.98,letterSpacing:'-.03em',textWrap:'balance'}}>
+            Turn Grow-Floor Photos Into Inspection-Ready <span style=${{boxShadow:'inset 0 -.13em 0 var(--volt)'}}>Punch Lists</span> in Seconds</h1>
+          <p class="mt-6 text-[17px] text-ash" style=${{maxWidth:'54ch'}}>Walk the facility with your phone. GrowView AI reads each photo against OMMA tag and waste rules and OSHA safety checks, marks every gap on the image, and hands your crew a room-by-room fix list before inspection day.</p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a href="#booking" class="btn btn-volt">BOOK FREE AUDIT <${ArrowRight} size=${15}/></a>
+            <a href="#scanner" class="btn btn-ghost">TRY THE SCANNER</a>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-3" style=${{borderTop:'1px solid var(--line)'}}>
+          ${trust.map(([Icon,t,d],i)=>html`<div key=${t} class="py-4 sm:pr-4" style=${{borderLeft:'0'}}>
+            <div class="flex items-center gap-2 mono text-[10.5px] text-paper"><${Icon} size=${14} className="text-volt"/>${t}</div>
+            <div class="text-[13px] text-ash mt-2 leading-snug">${d}</div></div>`)}
+        </div>
+      </div>
+      <div class="relative gridbg lg:border-l" style=${{borderColor:'var(--line)',minWidth:0}}>
+        <div class="gridbg-fade absolute inset-0 pointer-events-none"></div>
+        <div class="gut relative py-10 lg:py-16">
+          <div class="flex justify-between mono text-[10px] text-ash mb-5"><span>FIELD UNIT 04</span><span>35.2226° N · 97.4395° W</span></div>
+          <${Scanner}/>
+          <div class="flex justify-between mono text-[10px] text-ash mt-5"><span>LIVE DEMO · SAMPLE FACILITY</span><span>TAP ANY FLAG</span></div>
+        </div>
+      </div>
+    </div>
+  </div></section>`;
+}
+
+function Why(){
+  const rows=[['bad','Row 3, no plant tags'],['warn','Waste bin unmarked'],['ok','Exit path clear']];
+  const cells=[
+    {k:'RISK PREVENTION',t:'Catch the gap before the inspector does.',d:'Missing tags, blocked walkways and unlabeled containers cost little to fix on your schedule and a lot to find on theirs.',
+      v:html`<div class="mt-6">${rows.map(([s,l])=>html`<div key=${l} class="flex items-center gap-3 py-2" style=${{borderTop:'1px solid var(--line)'}}><span class="sq" style=${{background:COL[s]}}></span><span class="text-[13px] flex-1">${l}</span><span class="mono text-[10px] text-ash">${STAT[s]}</span></div>`)}</div>`},
+    {k:'MOBILE SPEED',t:'Built for the walk, not the desk.',d:'Take photos as you go. Flags land on the image within seconds, so nobody fills out forms in a wet room.',
+      v:html`<div class="mt-6 flex items-center gap-2 mono text-[10.5px]">${['SNAP','FLAG','FIX'].map((s,i)=>html`<${React.Fragment} key=${s}>${i>0&&html`<span class="text-ash">→</span>`}<span class="px-3 py-2" style=${{border:'1px solid '+(i===1?'var(--volt)':'var(--line-strong)'),color:i===1?'var(--volt)':'var(--paper)',borderRadius:'2px'}}>${s}</span><//>`)}</div>`},
+    {k:'AUDIT-READY DOCUMENTATION',t:'Every finding on paper.',d:'Each flag carries its room, category, priority and fix, so your crew and your records tell the same story.',
+      v:html`<div class="mt-6 p-3" style=${{background:'var(--paper)',borderRadius:'2px'}}>${[70,92,56,80].map((w,i)=>html`<div key=${i} class="flex items-center gap-2 mb-2 last:mb-0"><span style=${{width:'14px',height:'6px',background:i===0?'#EF4444':'#F59E0B'}}></span><span style=${{height:'6px',width:w+'%',background:'#c9ccc6'}}></span></div>`)}</div>`}
+  ];
+  return html`<section id="why"><div class="frame">
+    <div class="gut pt-16 pb-10"><${Eyebrow}>[01] WHY IT MATTERS<//>
+      <h2 class="font-display font-bold mt-5 text-[32px] sm:text-[44px]" style=${{lineHeight:1,letterSpacing:'-.025em',maxWidth:'18ch',textWrap:'balance'}}>Inspection day should be a non-event.</h2></div>
+    <div class="grid md:grid-cols-3" style=${{borderTop:'1px solid var(--line)'}}>
+      ${cells.map((c,i)=>html`<div key=${c.k} class="gut md:!px-8 py-8" style=${{borderLeft:i>0?'1px solid var(--line)':'0',borderTop:i>0?'0':'0',minWidth:0}}>
+        <div class="mono text-[10.5px] text-ash">${c.k}</div>
+        <h3 class="font-display font-semibold text-[22px] mt-4" style=${{lineHeight:1.1,letterSpacing:'-.015em'}}>${c.t}</h3>
+        <p class="text-[14.5px] text-ash mt-3">${c.d}</p>${c.v}</div>`)}
+    </div>
+  </div><${Rule}/></section>`;
+}
+
+function How(){
+  const st=[[Camera,'SNAP ON YOUR WALKTHROUGH','Photograph each room the way you already walk it. No special rig, no tag scanner.'],[ScanLine,'AI SCANS & FLAGS GAPS','Every photo is read for tags, waste handling and safety hazards. Gaps get a box and a priority.'],[FileText,'EXPORT YOUR PUNCH LIST','One PDF per walkthrough, grouped by room, ranked P1 and P2, ready for your crew.']];
+  return html`<section id="workflow"><div class="frame">
+    <div class="gut pt-16 pb-10"><${Eyebrow}>[02] WORKFLOW<//>
+      <h2 class="font-display font-bold mt-5 text-[32px] sm:text-[44px]" style=${{lineHeight:1,letterSpacing:'-.025em',maxWidth:'20ch',textWrap:'balance'}}>Three steps from photo to fix list.</h2></div>
+    <div class="grid md:grid-cols-3" style=${{borderTop:'1px solid var(--line)'}}>
+      ${st.map(([Icon,t,d],i)=>html`<div key=${t} class="gut md:!px-8 py-8" style=${{borderLeft:i>0?'1px solid var(--line)':'0',minWidth:0}}>
+        <div class="flex items-center justify-between"><span class="mono text-[11px] text-volt">STEP 0${i+1}</span><${Icon} size=${20} className="text-ash"/></div>
+        <div class="mt-6" style=${{height:'1px',background:'var(--line-strong)',position:'relative'}}><span style=${{position:'absolute',left:0,top:'-3px',width:'7px',height:'7px',background:'var(--volt)'}}></span></div>
+        <h3 class="font-display font-semibold text-[20px] mt-6" style=${{lineHeight:1.1}}>${t}</h3>
+        <p class="text-[14.5px] text-ash mt-3">${d}</p></div>`)}
+    </div>
+  </div><${Rule}/></section>`;
+}
+
+function Modules(){
+  const m=[[Tag,'MOD-01','Plant & Tag Verification','Reads plant tags in frame and flags missing, faded or mismatched ones against the group in view.',['Missing tag','Illegible or faded tag','Tag and group mismatch']],
+    [Video,'MOD-02','Waste & Video Audit Prep','Checks waste containers and staging areas, and lists which camera views need a clear sightline before a records review.',['Unmarked waste containers','Blocked camera sightlines','Cluttered staging areas']],
+    [ShieldCheck,'MOD-03','Facility & OSHA Safety Checks','Spots walkway hazards, missing guards, fire safety gaps and unlabeled chemicals from an ordinary walkthrough photo.',['Slip and trip hazards','Machine guarding','Extinguishers, exits, HazCom']],
+    [Layers,'MOD-04','Multi-Room Punch Lists','Groups every finding by room, ranks by priority and exports one list your crew can work down.',['Room-by-room grouping','P1 / P2 priority','PDF export']]];
+  return html`<section id="modules"><div class="frame">
+    <div class="gut pt-16 pb-10"><${Eyebrow}>[03] AUDIT MODULES<//>
+      <h2 class="font-display font-bold mt-5 text-[32px] sm:text-[44px]" style=${{lineHeight:1,letterSpacing:'-.025em',maxWidth:'18ch',textWrap:'balance'}}>Four modules, one walkthrough.</h2></div>
+    <div class="grid md:grid-cols-2" style=${{borderTop:'1px solid var(--line)'}}>
+      ${m.map(([Icon,id,t,d,ch],i)=>html`<div key=${id} class="gut md:!px-8 py-8" style=${{borderLeft:i%2===1?'1px solid var(--line)':'0',borderTop:i>1?'1px solid var(--line)':'0',minWidth:0}}>
+        <div class="flex items-center justify-between"><span class="mono text-[11px] text-volt">${id}</span><${Icon} size=${20} className="text-ash"/></div>
+        <h3 class="font-display font-semibold text-[24px] mt-5" style=${{lineHeight:1.1,letterSpacing:'-.015em'}}>${t}</h3>
+        <p class="text-[14.5px] text-ash mt-3" style=${{maxWidth:'52ch'}}>${d}</p>
+        <ul class="mt-5">${ch.map(c=>html`<li key=${c} class="flex items-center gap-3 py-2 mono text-[11px]" style=${{borderTop:'1px solid var(--line)'}}><span style=${{width:'9px',height:'9px',border:'1px solid var(--ash)'}}></span>${c.toUpperCase()}</li>`)}</ul></div>`)}
+    </div>
+  </div><${Rule}/></section>`;
+}
+
+function Booking(){
+  const [v,setV]=useState({name:'',facility:'',email:'',county:'',type:'Cultivation',rooms:'1 to 3 rooms',notes:''});
+  const [err,setErr]=useState({});
+  const [done,setDone]=useState(false);
+  const [copied,setCopied]=useState(false);
+  const set=k=>e=>setV(Object.assign({},v,{[k]:e.target.value}));
+  const submit=e=>{
+    e.preventDefault();
+    const er={};
+    if(!v.name.trim()) er.name='Enter your name.';
+    if(!v.facility.trim()) er.facility='Enter your facility name.';
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) er.email='Enter a valid email address.';
+    setErr(er);
+    if(Object.keys(er).length===0) setDone(true);
+  };
+  const body=`GrowView AI pilot walkthrough request\nName: ${v.name}\nFacility: ${v.facility}\nEmail: ${v.email}\nCounty / city: ${v.county||'n/a'}\nLicense type: ${v.type}\nRooms: ${v.rooms}\nNotes: ${v.notes||'none'}`;
+  const doCopy=(t,setter)=>copyText(t,ok=>{ setter(ok); setTimeout(()=>setter(false),1800); });
+  const [mailCopied,setMailCopied]=useState(false);
+  const field=(id,label,props,error)=>html`<div><label class="lbl" for=${id}>${label}</label>${props.tag==='select'
+      ? html`<select id=${id} class="field" value=${v[props.k]} onChange=${set(props.k)}>${props.opts.map(o=>html`<option key=${o}>${o}</option>`)}</select>`
+      : props.tag==='textarea'
+      ? html`<textarea id=${id} class="field" rows="3" placeholder=${props.ph} value=${v[props.k]} onChange=${set(props.k)}></textarea>`
+      : html`<input id=${id} class="field" type=${props.type||'text'} placeholder=${props.ph} value=${v[props.k]} onChange=${set(props.k)} aria-invalid=${!!error}/>`}
+      ${error && html`<div class="text-[12.5px] mt-2" style=${{color:'var(--bad)'}}>${error}</div>`}</div>`;
+  return html`<section id="booking"><div class="frame"><div class="grid lg:grid-cols-2">
+    <div class="gut py-16" style=${{minWidth:0}}>
+      <${Eyebrow}>PILOT WALKTHROUGH<//>
+      <h2 class="font-display font-bold mt-5 text-[32px] sm:text-[44px]" style=${{lineHeight:1,letterSpacing:'-.025em',textWrap:'balance'}}>Book a free audit of your facility.</h2>
+      <p class="text-[16px] text-ash mt-5" style=${{maxWidth:'46ch'}}>We walk two or three rooms with you, scan them live, and leave you with the punch list. No contract and no data pull from your state systems.</p>
+      <div class="mt-10" style=${{borderTop:'1px solid var(--line)'}}>
+        <div class="flex items-center gap-4 py-4" style=${{borderBottom:'1px solid var(--line)'}}><${Mail} size=${18} className="text-volt"/><div class="flex-1 min-w-0"><div class="mono text-[10px] text-ash">EMAIL</div><div class="mono text-[15px] mt-1 select-all break-all">hello@growview.app</div></div>
+          <button class="btn btn-ghost" style=${{padding:'9px 11px',fontSize:'10.5px'}} onClick=${()=>doCopy('hello@growview.app',setMailCopied)}>${mailCopied?'COPIED':'COPY'}</button></div>
+        <div class="flex items-center gap-4 py-4" style=${{borderBottom:'1px solid var(--line)'}}><${MapPin} size=${18} className="text-volt"/><div><div class="mono text-[10px] text-ash">BASED IN</div><div class="mono text-[15px] mt-1">Norman, OK</div></div></div>
+      </div>
+    </div>
+    <div class="gut py-16 lg:border-l" style=${{borderColor:'var(--line)',background:'var(--slate)',minWidth:0}}>
+      ${!done ? html`<form onSubmit=${submit} noValidate class="grid gap-5">
+        <div class="mono text-[11px] text-ash">INTAKE FORM // 3 REQUIRED FIELDS</div>
+        <div class="grid sm:grid-cols-2 gap-5">${field('f-name','YOUR NAME',{k:'name',ph:'Full name'},err.name)}${field('f-fac','FACILITY NAME',{k:'facility',ph:'Licensed business name'},err.facility)}</div>
+        ${field('f-email','EMAIL',{k:'email',type:'email',ph:'you@facility.com'},err.email)}
+        <div class="grid sm:grid-cols-2 gap-5">${field('f-county','CITY OR COUNTY',{k:'county',ph:'Cleveland County'})}${field('f-type','LICENSE TYPE',{k:'type',tag:'select',opts:['Cultivation','Processing','Dispensary','More than one license']})}</div>
+        ${field('f-rooms','ROOMS TO AUDIT',{k:'rooms',tag:'select',opts:['1 to 3 rooms','4 to 8 rooms','9 or more rooms']})}
+        ${field('f-notes','ANYTHING WE SHOULD KNOW',{k:'notes',tag:'textarea',ph:'Upcoming inspection date, problem areas, access rules'})}
+        <button type="submit" class="btn btn-volt w-full">REQUEST FREE AUDIT <${ArrowRight} size=${15}/></button>
+      </form>` : html`<div>
+        <div class="flex items-center gap-3 mono text-[11px] text-volt"><${Check} size=${16}/>REQUEST READY</div>
+        <h3 class="font-display font-semibold text-[26px] mt-4" style=${{lineHeight:1.1}}>Send it to hello@growview.app</h3>
+        <p class="text-[14.5px] text-ash mt-3">This preview does not send messages. Copy the request below and email it, and we will reply within one business day.</p>
+        <pre class="mono text-[11.5px] mt-5 p-4 overflow-x-auto" style=${{background:'var(--carbon)',border:'1px solid var(--line-strong)',borderRadius:'2px',whiteSpace:'pre-wrap',wordBreak:'break-word',letterSpacing:0}}>${body}</pre>
+        <div class="flex flex-wrap gap-3 mt-5"><button class="btn btn-volt" onClick=${()=>doCopy(body,setCopied)}><${copied?Check:Copy} size=${15}/>${copied?'COPIED':'COPY REQUEST'}</button><button class="btn btn-ghost" onClick=${()=>setDone(false)}>EDIT</button></div>
+      </div>`}
+    </div>
+  </div></div><${Rule}/></section>`;
+}
+
+function Footer(){
+  return html`<footer><div class="frame">
+    <div class="gut pt-14 pb-6" style=${{overflow:'hidden'}}><div class="wordmark" aria-label="GrowView AI">GROWVIEW AI</div></div>
+    <div style=${{borderTop:'1px solid var(--line)'}} class="gut py-5 flex flex-wrap items-center justify-between gap-x-8 gap-y-3 mono text-[10.5px] text-ash">
+      <span>© 2026 GROWVIEW AI · NORMAN, OKLAHOMA</span>
+      <span>GROWVIEW.APP · PILOT BUILD</span>
+      <span class="basis-full leading-relaxed" style=${{letterSpacing:'.02em'}}>GrowView AI is a documentation aid. It does not replace OMMA or OSHA requirements, official inspections or legal advice.</span>
+    </div>
+  </div></footer>`;
+}
+
+function App(){
+  return html`<div class="page"><${Nav}/><main><${Hero}/><${Rule}/><${Why}/><${How}/><${Modules}/><${Booking}/></main><${Footer}/></div>`;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(html`<${App}/>`);
+})();
+</script>
+</body>
+</html>
