@@ -47,6 +47,10 @@
   .navbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:rgba(10,11,10,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
   .navlink{font:500 11px/1 var(--mono);letter-spacing:.08em;color:var(--ash);transition:color .15s}
   .navlink:hover{color:var(--paper)}
+  .header-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .login-link{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 13px;font:600 11px/1 var(--mono);letter-spacing:.06em;color:var(--paper);border:1px solid var(--line-strong);border-radius:2px;text-decoration:none;white-space:nowrap}
+  .login-link:hover{color:var(--volt);border-color:var(--volt)}
+  @media(max-width:600px){.header-booking{display:none!important}}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;font:700 12px/1 var(--mono);letter-spacing:.08em;padding:14px 18px;border-radius:2px;border:1px solid transparent;cursor:pointer;transition:transform .12s,background .15s,border-color .15s,color .15s;white-space:nowrap}
   .btn-volt{background:var(--volt);color:#0A0B0A;border-color:var(--volt)}
   .btn-volt:hover{background:#e3ff6b;border-color:#e3ff6b}
@@ -354,7 +358,10 @@ function Nav(){
     <nav class="hidden lg:flex items-center gap-7" aria-label="Sections">
       <a class="navlink" href="#why">[01] WHY IT MATTERS</a><a class="navlink" href="#workflow">[02] WORKFLOW</a><a class="navlink" href="#modules">[03] AUDIT MODULES</a>
     </nav>
-    <a href="#booking" class="btn btn-volt" style=${{padding:'11px 14px',fontSize:'11px'}}>BOOK FREE AUDIT</a>
+    <div class="header-actions">
+      <a href="#booking" class="btn btn-volt header-booking" style=${{padding:'11px 14px',fontSize:'11px'}}>BOOK FREE AUDIT</a>
+      <a href="https://grow-view-2-app.replit.app/" class="login-link" aria-label="Log in to GrowView AI software">LOG IN</a>
+    </div>
   </div></header>`;
 }
 
@@ -450,25 +457,55 @@ function Booking(){
   const [v,setV]=useState({name:'',facility:'',email:'',county:'',type:'Cultivation',rooms:'1 to 3 rooms',notes:''});
   const [err,setErr]=useState({});
   const [done,setDone]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [saveError,setSaveError]=useState('');
+  const [requestId,setRequestId]=useState(()=>crypto.randomUUID());
+  const [reference,setReference]=useState('');
+  const [website,setWebsite]=useState('');
   const [copied,setCopied]=useState(false);
-  const set=k=>e=>setV(Object.assign({},v,{[k]:e.target.value}));
-  const submit=e=>{
+  const set=k=>e=>{setV(Object.assign({},v,{[k]:e.target.value}));setRequestId(crypto.randomUUID());setSaveError('');};
+  const submit=async e=>{
     e.preventDefault();
+    if(saving) return;
     const er={};
     if(!v.name.trim()) er.name='Enter your name.';
     if(!v.facility.trim()) er.facility='Enter your facility name.';
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) er.email='Enter a valid email address.';
     setErr(er);
-    if(Object.keys(er).length===0) setDone(true);
+    if(Object.keys(er).length) return;
+    setSaving(true);
+    setSaveError('');
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),20000);
+    try {
+      const response=await fetch('/api/leads',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({...v,requestId,website}),
+        signal:controller.signal
+      });
+      const result=await response.json().catch(()=>null);
+      if(!response.ok || result?.ok!==true || typeof result.id!=='string') {
+        throw new Error(result?.error || 'We could not confirm your request. Please retry.');
+      }
+      setReference(result.id);
+      setDone(true);
+    } catch(error) {
+      setSaveError(error?.name==='AbortError'
+        ? 'The connection timed out. Please retry; retrying the same request will not save it twice.'
+        : error instanceof Error ? error.message : 'Could not save your request. Please retry.');
+    } finally {
+      clearTimeout(timeout);
+      setSaving(false);
+    }
   };
   const body=`GrowView AI pilot walkthrough request\nName: ${v.name}\nFacility: ${v.facility}\nEmail: ${v.email}\nCounty / city: ${v.county||'n/a'}\nLicense type: ${v.type}\nRooms: ${v.rooms}\nNotes: ${v.notes||'none'}`;
   const doCopy=(t,setter)=>copyText(t,ok=>{ setter(ok); setTimeout(()=>setter(false),1800); });
   const [mailCopied,setMailCopied]=useState(false);
   const field=(id,label,props,error)=>html`<div><label class="lbl" for=${id}>${label}</label>${props.tag==='select'
-      ? html`<select id=${id} class="field" value=${v[props.k]} onChange=${set(props.k)}>${props.opts.map(o=>html`<option key=${o}>${o}</option>`)}</select>`
+      ? html`<select id=${id} class="field" disabled=${saving} value=${v[props.k]} onChange=${set(props.k)}>${props.opts.map(o=>html`<option key=${o}>${o}</option>`)}</select>`
       : props.tag==='textarea'
-      ? html`<textarea id=${id} class="field" rows="3" placeholder=${props.ph} value=${v[props.k]} onChange=${set(props.k)}></textarea>`
-      : html`<input id=${id} class="field" type=${props.type||'text'} placeholder=${props.ph} value=${v[props.k]} onChange=${set(props.k)} aria-invalid=${!!error}/>`}
+      ? html`<textarea id=${id} class="field" disabled=${saving} maxLength="3000" rows="3" placeholder=${props.ph} value=${v[props.k]} onChange=${set(props.k)}></textarea>`
+      : html`<input id=${id} class="field" disabled=${saving} maxLength=${({name:120,facility:200,email:254,county:160})[props.k]} type=${props.type||'text'} placeholder=${props.ph} value=${v[props.k]} onChange=${set(props.k)} aria-invalid=${!!error}/>`}
       ${error && html`<div class="text-[12.5px] mt-2" style=${{color:'var(--bad)'}}>${error}</div>`}</div>`;
   return html`<section id="booking"><div class="frame"><div class="grid lg:grid-cols-2">
     <div class="gut py-16" style=${{minWidth:0}}>
@@ -482,20 +519,23 @@ function Booking(){
       </div>
     </div>
     <div class="gut py-16 lg:border-l" style=${{borderColor:'var(--line)',background:'var(--slate)',minWidth:0}}>
-      ${!done ? html`<form onSubmit=${submit} noValidate class="grid gap-5">
+      ${!done ? html`<form onSubmit=${submit} noValidate aria-busy=${saving} class="grid gap-5">
         <div class="mono text-[11px] text-ash">INTAKE FORM // 3 REQUIRED FIELDS</div>
         <div class="grid sm:grid-cols-2 gap-5">${field('f-name','YOUR NAME',{k:'name',ph:'Full name'},err.name)}${field('f-fac','FACILITY NAME',{k:'facility',ph:'Licensed business name'},err.facility)}</div>
         ${field('f-email','EMAIL',{k:'email',type:'email',ph:'you@facility.com'},err.email)}
         <div class="grid sm:grid-cols-2 gap-5">${field('f-county','CITY OR COUNTY',{k:'county',ph:'Cleveland County'})}${field('f-type','LICENSE TYPE',{k:'type',tag:'select',opts:['Cultivation','Processing','Dispensary','More than one license']})}</div>
         ${field('f-rooms','ROOMS TO AUDIT',{k:'rooms',tag:'select',opts:['1 to 3 rooms','4 to 8 rooms','9 or more rooms']})}
         ${field('f-notes','ANYTHING WE SHOULD KNOW',{k:'notes',tag:'textarea',ph:'Upcoming inspection date, problem areas, access rules'})}
-        <button type="submit" class="btn btn-volt w-full">REQUEST FREE AUDIT <${ArrowRight} size=${15}/></button>
+        <div aria-hidden="true" style=${{position:'absolute',left:'-10000px',width:'1px',height:'1px',overflow:'hidden'}}><label for="f-website">Leave this field blank</label><input id="f-website" name="website" type="text" tabIndex="-1" autoComplete="off" value=${website} onChange=${e=>setWebsite(e.target.value)}/></div>
+        ${saveError && html`<p role="alert" class="text-[14px]" style=${{color:'var(--bad)'}}>${saveError}</p>`}
+        <button type="submit" disabled=${saving} class="btn btn-volt w-full" style=${{minHeight:'48px',opacity:saving ? .65 : 1}}>${saving?'SAVING REQUEST…':'REQUEST FREE AUDIT'} <${ArrowRight} size=${15}/></button>
       </form>` : html`<div>
-        <div class="flex items-center gap-3 mono text-[11px] text-volt"><${Check} size=${16}/>REQUEST READY</div>
-        <h3 class="font-display font-semibold text-[26px] mt-4" style=${{lineHeight:1.1}}>Send it to hello@growview.app</h3>
-        <p class="text-[14.5px] text-ash mt-3">This preview does not send messages. Copy the request below and email it, and we will reply within one business day.</p>
+        <div role="status" class="flex items-center gap-3 mono text-[11px] text-volt"><${Check} size=${16}/>REQUEST SAVED</div>
+        <h3 class="font-display font-semibold text-[26px] mt-4" style=${{lineHeight:1.1}}>Your audit request is saved.</h3>
+        <p class="text-[14.5px] text-ash mt-3">Your details have been securely recorded for the GrowView team. You do not need to copy or email this request.</p>
+        <p class="mono text-[10.5px] text-ash mt-3" style=${{wordBreak:'break-all'}}>REFERENCE: ${reference}</p>
         <pre class="mono text-[11.5px] mt-5 p-4 overflow-x-auto" style=${{background:'var(--carbon)',border:'1px solid var(--line-strong)',borderRadius:'2px',whiteSpace:'pre-wrap',wordBreak:'break-word',letterSpacing:0}}>${body}</pre>
-        <div class="flex flex-wrap gap-3 mt-5"><button class="btn btn-volt" onClick=${()=>doCopy(body,setCopied)}><${copied?Check:Copy} size=${15}/>${copied?'COPIED':'COPY REQUEST'}</button><button class="btn btn-ghost" onClick=${()=>setDone(false)}>EDIT</button></div>
+        <div class="flex flex-wrap gap-3 mt-5"><button class="btn btn-volt" onClick=${()=>doCopy(body,setCopied)}><${copied?Check:Copy} size=${15}/>${copied?'COPIED':'COPY DETAILS'}</button></div>
       </div>`}
     </div>
   </div></div><${Rule}/></section>`;
